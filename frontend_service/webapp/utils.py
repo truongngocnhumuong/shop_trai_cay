@@ -1,0 +1,201 @@
+"""
+Utility functions for communicating with other services
+"""
+import time
+import requests
+from django.conf import settings
+from django.contrib import messages
+
+
+def call_auth_service_login(username, password):
+    """Call Auth Service to login user"""
+    try:
+        url = f'{settings.AUTH_SERVICE_URL}/api/login/'
+        response = requests.post(url, json={
+            'username': username,
+            'password': password
+        }, timeout=5)
+        
+        if response.status_code == 200:
+            return {
+                'success': True,
+                'data': response.json()
+            }
+        else:
+            return {
+                'success': False,
+                'error': response.json().get('detail', 'Login failed')
+            }
+    except requests.exceptions.RequestException as e:
+        return {
+            'success': False,
+            'error': f'Cannot connect to Auth Service: {str(e)}'
+        }
+
+def call_auth_service_verify_token(token):
+    """Call Auth Service to verify token"""
+    try:
+        url = f'{settings.AUTH_SERVICE_URL}/api/verify-token/'
+        response = requests.post(url, json={'token': token}, timeout=5)
+        
+        if response.status_code == 200:
+            return {
+                'success': True,
+                'data': response.json()
+            }
+        return {
+            'success': False,
+            'error': 'Invalid token'
+        }
+    except requests.exceptions.RequestException:
+        return {
+            'success': False,
+            'error': 'Cannot connect to Auth Service'
+        }
+
+def get_products():
+    """Get all products from Product Service"""
+    try:
+        # Add timestamp to prevent caching
+        timestamp = int(time.time())
+        url = f'{settings.PRODUCT_SERVICE_URL}/api/products/'
+        params = {'_': timestamp}  # Prevent caching
+        
+        response = requests.get(url, params=params, timeout=5)
+        
+        if response.status_code == 200:
+            data = response.json()
+            # Handle both direct array response and paginated response with 'results' key
+            products = data.get('results', data) if isinstance(data, dict) else data
+            return {
+                'success': True,
+                'data': products
+            }
+        return {
+            'success': False,
+            'error': 'Failed to fetch products'
+        }
+    except requests.exceptions.RequestException as e:
+        return {
+            'success': False,
+            'error': f'Cannot connect to Product Service: {str(e)}'
+        }
+
+def get_product(product_id):
+    """Get a single product from Product Service"""
+    try:
+        url = f'{settings.PRODUCT_SERVICE_URL}/api/products/{product_id}/'
+        response = requests.get(url, timeout=5)
+        
+        if response.status_code == 200:
+            return {
+                'success': True,
+                'data': response.json()
+            }
+        return {
+            'success': False,
+            'error': 'Product not found'
+        }
+    except requests.exceptions.RequestException as e:
+        return {
+            'success': False,
+            'error': f'Cannot connect to Product Service: {str(e)}'
+        }
+
+def get_inventory(product_id):
+    """Get inventory for a product from Inventory Service"""
+    try:
+        # Add timestamp to prevent caching
+        timestamp = int(time.time())
+        url = f'{settings.INVENTORY_SERVICE_URL}/api/inventory/'
+        params = {
+            'product_id': product_id,
+            '_': timestamp  # Prevent caching
+        }
+        
+        response = requests.get(url, params=params, timeout=5)
+        
+        if response.status_code == 200:
+            data = response.json()
+            # Handle paginated response
+            inventory_items = data.get('results', data) if isinstance(data, dict) else data
+            
+            # If we got a list, find the matching product
+            if isinstance(inventory_items, list):
+                for item in inventory_items:
+                    if str(item.get('product_id')) == str(product_id):
+                        return {
+                            'success': True,
+                            'data': item
+                        }
+                return {
+                    'success': False,
+                    'error': f'No inventory found for product {product_id}'
+                }
+            
+            # If we got a single item directly
+            return {
+                'success': True,
+                'data': inventory_items
+            }
+            
+        return {
+            'success': False,
+            'error': f'Failed to fetch inventory. Status code: {response.status_code}'
+        }
+    except requests.exceptions.RequestException as e:
+        return {
+            'success': False,
+            'error': f'Cannot connect to Inventory Service: {str(e)}'
+        }
+
+def create_order(user_id, items, access_token=None):
+    """Create order via Order Service"""
+    try:
+        url = f'{settings.ORDER_SERVICE_URL}/api/orders/'
+        headers = {'Content-Type': 'application/json'}
+        if access_token:
+            headers['Authorization'] = f'Bearer {access_token}'
+        
+        # Increase timeout and add connection pooling
+        session = requests.Session()
+        adapter = requests.adapters.HTTPAdapter(
+            max_retries=3,
+            pool_connections=10,
+            pool_maxsize=10
+        )
+        session.mount('http://', adapter)
+        
+        response = session.post(
+            url,
+            json={
+                'user_id': user_id,
+                'items': items
+            },
+            headers=headers,
+            timeout=30  # Increased timeout to 30 seconds
+        )
+        
+        if response.status_code == 201:
+            return {
+                'success': True,
+                'data': response.json()
+            }
+        else:
+            error_data = response.json() if response.content else {}
+            return {
+                'success': False,
+                'error': error_data.get('detail', 'Failed to create order'),
+                'status_code': response.status_code
+            }
+    except requests.exceptions.RequestException as e:
+        return {
+            'success': False,
+            'error': f'Cannot connect to Order Service: {str(e)}'
+        }
+    except Exception as e:
+        return {
+            'success': False,
+            'error': f'Unexpected error: {str(e)}'
+        }
+
