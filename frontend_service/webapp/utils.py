@@ -105,44 +105,27 @@ def get_product(product_id):
 def get_inventory(product_id):
     """Get inventory for a product from Inventory Service"""
     try:
-        # Add timestamp to prevent caching
-        timestamp = int(time.time())
-        url = f'{settings.INVENTORY_SERVICE_URL}/api/inventory/'
-        params = {
-            'product_id': product_id,
-            '_': timestamp  # Prevent caching
-        }
+        # Call the correct endpoint with product_id as path parameter
+        url = f'{settings.INVENTORY_SERVICE_URL}/api/inventory/{product_id}/'
         
-        response = requests.get(url, params=params, timeout=5)
+        response = requests.get(url, timeout=5)
         
         if response.status_code == 200:
             data = response.json()
-            # Handle paginated response
-            inventory_items = data.get('results', data) if isinstance(data, dict) else data
-            
-            # If we got a list, find the matching product
-            if isinstance(inventory_items, list):
-                for item in inventory_items:
-                    if str(item.get('product_id')) == str(product_id):
-                        return {
-                            'success': True,
-                            'data': item
-                        }
-                return {
-                    'success': False,
-                    'error': f'No inventory found for product {product_id}'
-                }
-            
-            # If we got a single item directly
             return {
                 'success': True,
-                'data': inventory_items
+                'data': data
             }
-            
-        return {
-            'success': False,
-            'error': f'Failed to fetch inventory. Status code: {response.status_code}'
-        }
+        elif response.status_code == 404:
+            return {
+                'success': False,
+                'error': f'No inventory found for product {product_id}'
+            }
+        else:
+            return {
+                'success': False,
+                'error': f'Failed to fetch inventory. Status code: {response.status_code}'
+            }
     except requests.exceptions.RequestException as e:
         return {
             'success': False,
