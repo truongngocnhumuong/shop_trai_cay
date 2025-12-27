@@ -109,4 +109,6 @@ CORS_ALLOW_CREDENTIALS = True
 # Service URLs (SOA Configuration)
 PRODUCT_SERVICE_URL = 'http://localhost:8002'
 AUTH_SERVICE_URL = 'http://localhost:8001'
+INVENTORY_SERVICE_URL = 'http://localhost:8004'
+
 

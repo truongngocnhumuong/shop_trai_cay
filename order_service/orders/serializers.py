@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from .models import Order, OrderItem
-from .utils import get_product_from_service
+from .utils import get_product_from_service, decrease_inventory
 
 class OrderItemSerializer(serializers.ModelSerializer):
     """Serializer for OrderItem model"""
@@ -104,6 +104,12 @@ class OrderCreateSerializer(serializers.Serializer):
                 price=price
             )
             total_price += price * quantity
+            
+            # Decrease inventory
+            if not decrease_inventory(product_id, quantity):
+                # Log warning but don't fail the order
+                # In production, you might want to handle this differently
+                print(f"Warning: Could not decrease inventory for product {product_id}")
         
         order.total_price = total_price
         order.save()

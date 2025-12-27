@@ -137,6 +137,23 @@ def create_order_view(request):
             # Reload products for the form
             result = get_products()
             products = result.get('data', []) if result['success'] else []
+            
+            # Get inventory for each product
+            for product in products:
+                if not isinstance(product, dict):
+                    continue
+                    
+                product_id = product.get('id') or product.get('product_id')
+                if not product_id:
+                    continue
+                    
+                inventory_result = get_inventory(product_id)
+                
+                if inventory_result['success']:
+                    product['inventory_quantity'] = inventory_result['data'].get('quantity', 0)
+                else:
+                    product['inventory_quantity'] = None  # Unknown
+            
             context = {
                 'products': products,
                 'username': request.session.get('username', 'User'),
@@ -163,6 +180,22 @@ def create_order_view(request):
     # GET request - show form
     result = get_products()
     products = result.get('data', []) if result['success'] else []
+    
+    # Get inventory for each product
+    for product in products:
+        if not isinstance(product, dict):
+            continue
+            
+        product_id = product.get('id') or product.get('product_id')
+        if not product_id:
+            continue
+            
+        inventory_result = get_inventory(product_id)
+        
+        if inventory_result['success']:
+            product['inventory_quantity'] = inventory_result['data'].get('quantity', 0)
+        else:
+            product['inventory_quantity'] = None  # Unknown
     
     context = {
         'products': products,
