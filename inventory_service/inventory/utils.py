@@ -21,6 +21,23 @@ def get_product_from_service(product_id):
         print(f"Error fetching product {product_id}: {e}")
         return None
 
+def get_all_products_from_service():
+    """
+    Get all products from Product Service via API
+    Returns list of products or empty list if failed
+    """
+    try:
+        url = f'{settings.PRODUCT_SERVICE_URL}/api/products/'
+        response = requests.get(url, timeout=5)
+        
+        if response.status_code == status.HTTP_200_OK:
+            data = response.json()
+            return data.get('results', data) if isinstance(data, dict) else data
+        return []
+    except requests.exceptions.RequestException as e:
+        print(f"Error fetching all products: {e}")
+        return []
+
 def update_inventory_from_order(order_data):
     """
     Update inventory based on order data from Order Service

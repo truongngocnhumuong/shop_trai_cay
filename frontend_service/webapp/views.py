@@ -11,6 +11,7 @@ from .utils import (
     call_auth_service_verify_token,
     get_products,
     get_inventory,
+    get_all_inventories,
     create_order
 )
 
@@ -81,25 +82,18 @@ def product_list_view(request):
     else:
         products = result['data']
         
-        # Get fresh inventory for each product
+        # Get all inventories in one bulk request (OPTIMIZATION: Fix N+1 problem)
+        inventory_data = get_all_inventories()
+        inventory_map = {}
+        if inventory_data['success']:
+            # Create a map of product_id -> quantity for O(1) lookup
+            for item in inventory_data['data']:
+                inventory_map[item.get('product_id')] = item.get('quantity', 0)
+        
+        # Merge inventory data into products
         for product in products:
-            if not isinstance(product, dict):
-                print(f"Warning: Product is not a dictionary: {product}")
-                continue
-                
             product_id = product.get('id') or product.get('product_id')
-            if not product_id:
-                print(f"Warning: Could not find ID in product: {product}")
-                continue
-                
-            # Add a timestamp to ensure we don't get a cached response
-            timestamp = int(time.time())
-            inventory_result = get_inventory(product_id)
-            
-            if inventory_result['success']:
-                product['inventory_quantity'] = inventory_result['data'].get('quantity', 0)
-            else:
-                product['inventory_quantity'] = None  # Unknown
+            product['inventory_quantity'] = inventory_map.get(product_id, 0)
     
     context = {
         'products': products,
@@ -138,21 +132,17 @@ def create_order_view(request):
             result = get_products()
             products = result.get('data', []) if result['success'] else []
             
-            # Get inventory for each product
+            # Get all inventories in one bulk request (OPTIMIZATION: Fix N+1 problem)
+            inventory_data = get_all_inventories()
+            inventory_map = {}
+            if inventory_data['success']:
+                for item in inventory_data['data']:
+                    inventory_map[item.get('product_id')] = item.get('quantity', 0)
+            
+            # Merge inventory data into products
             for product in products:
-                if not isinstance(product, dict):
-                    continue
-                    
                 product_id = product.get('id') or product.get('product_id')
-                if not product_id:
-                    continue
-                    
-                inventory_result = get_inventory(product_id)
-                
-                if inventory_result['success']:
-                    product['inventory_quantity'] = inventory_result['data'].get('quantity', 0)
-                else:
-                    product['inventory_quantity'] = None  # Unknown
+                product['inventory_quantity'] = inventory_map.get(product_id, 0)
             
             context = {
                 'products': products,
@@ -181,21 +171,17 @@ def create_order_view(request):
     result = get_products()
     products = result.get('data', []) if result['success'] else []
     
-    # Get inventory for each product
+    # Get all inventories in one bulk request (OPTIMIZATION: Fix N+1 problem)
+    inventory_data = get_all_inventories()
+    inventory_map = {}
+    if inventory_data['success']:
+        for item in inventory_data['data']:
+            inventory_map[item.get('product_id')] = item.get('quantity', 0)
+    
+    # Merge inventory data into products
     for product in products:
-        if not isinstance(product, dict):
-            continue
-            
         product_id = product.get('id') or product.get('product_id')
-        if not product_id:
-            continue
-            
-        inventory_result = get_inventory(product_id)
-        
-        if inventory_result['success']:
-            product['inventory_quantity'] = inventory_result['data'].get('quantity', 0)
-        else:
-            product['inventory_quantity'] = None  # Unknown
+        product['inventory_quantity'] = inventory_map.get(product_id, 0)
     
     context = {
         'products': products,

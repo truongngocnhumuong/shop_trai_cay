@@ -1,6 +1,11 @@
 from rest_framework import serializers
 from .models import Order, OrderItem
-from .utils import get_product_from_service, decrease_inventory
+from .utils import (
+    get_product_from_service, 
+    decrease_inventory, 
+    bulk_decrease_inventory, 
+    get_all_products_from_service
+)
 
 class OrderItemSerializer(serializers.ModelSerializer):
     """Serializer for OrderItem model"""
@@ -37,13 +42,6 @@ class OrderItemCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = OrderItem
         fields = ['product_id', 'quantity']
-    
-    def validate_product_id(self, value):
-        """Validate that product exists in Product Service"""
-        product = get_product_from_service(value)
-        if not product:
-            raise serializers.ValidationError(f"Product with ID {value} does not exist in Product Service.")
-        return value
 
 class OrderSerializer(serializers.ModelSerializer):
     """Serializer for Order model"""
@@ -76,9 +74,25 @@ class OrderCreateSerializer(serializers.Serializer):
     )
     
     def validate_items(self, value):
-        """Validate that items list is not empty"""
+        """Validate that items list is not empty and products exist"""
         if not value:
             raise serializers.ValidationError("Order must have at least one item.")
+        
+        # --- Optimization: Bulk Validate Products ---
+        requested_ids = {item['product_id'] for item in value}
+        all_products = get_all_products_from_service()
+        existing_ids = {p['id'] for p in all_products}
+        
+        missing_ids = requested_ids - existing_ids
+        if missing_ids:
+            # Re-check missing IDs individually in case they are very new (not in bulk list yet)
+            for mid in list(missing_ids):
+                if get_product_from_service(mid):
+                    missing_ids.remove(mid)
+            
+            if missing_ids:
+                raise serializers.ValidationError(f"Sản phẩm với ID {list(missing_ids)} không tồn tại.")
+                
         return value
     
     def create(self, validated_data):
@@ -86,31 +100,44 @@ class OrderCreateSerializer(serializers.Serializer):
         items_data = validated_data.pop('items')
         order = Order.objects.create(**validated_data)
         
+        # --- Optimization: Bulk fetch products ---
+        all_products = get_all_products_from_service()
+        product_map = {p['id']: p for p in all_products}
+        
         total_price = 0
+        items_to_create = []
+        inventory_updates = []
+        
         for item_data in items_data:
             product_id = item_data['product_id']
             quantity = item_data['quantity']
             
-            # Get product price from Product Service
-            product = get_product_from_service(product_id)
+            # Lookup product from map
+            product = product_map.get(product_id)
             if not product:
-                raise serializers.ValidationError(f"Product {product_id} not found in Product Service.")
+                # Fallback to single fetch if not in bulk (newly created product?)
+                product = get_product_from_service(product_id)
+            
+            if not product:
+                raise serializers.ValidationError(f"Product {product_id} not found.")
             
             price = float(product['price'])
-            OrderItem.objects.create(
+            items_to_create.append(OrderItem(
                 order=order,
                 product_id=product_id,
                 quantity=quantity,
                 price=price
-            )
+            ))
             total_price += price * quantity
+            inventory_updates.append({'product_id': product_id, 'quantity': quantity})
             
-            # Decrease inventory
-            if not decrease_inventory(product_id, quantity):
-                # Log warning but don't fail the order
-                # In production, you might want to handle this differently
-                print(f"Warning: Could not decrease inventory for product {product_id}")
+        # Bulk create order items
+        OrderItem.objects.bulk_create(items_to_create)
         
+        # Bulk decrease inventory
+        if inventory_updates:
+            bulk_decrease_inventory(inventory_updates)
+            
         order.total_price = total_price
         order.save()
         

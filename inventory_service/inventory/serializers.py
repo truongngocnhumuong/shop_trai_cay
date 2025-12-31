@@ -23,6 +23,13 @@ class InventorySerializer(serializers.ModelSerializer):
             }
         return None
 
+class SimpleInventorySerializer(serializers.ModelSerializer):
+    """Simple serializer for Inventory model without external calls"""
+    class Meta:
+        model = Inventory
+        fields = ['id', 'product_id', 'quantity', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'created_at', 'updated_at']
+
 class InventoryUpdateSerializer(serializers.Serializer):
     """
     Serializer for updating inventory

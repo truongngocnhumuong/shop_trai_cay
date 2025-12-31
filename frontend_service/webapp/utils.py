@@ -132,6 +132,30 @@ def get_inventory(product_id):
             'error': f'Cannot connect to Inventory Service: {str(e)}'
         }
 
+def get_all_inventories():
+    """Get all inventory records from Inventory Service"""
+    try:
+        url = f'{settings.INVENTORY_SERVICE_URL}/api/inventory/'
+        response = requests.get(url, timeout=5)
+        
+        if response.status_code == 200:
+            data = response.json()
+            # Handle paginated or direct list response
+            inventories = data.get('results', data) if isinstance(data, dict) else data
+            return {
+                'success': True,
+                'data': inventories
+            }
+        return {
+            'success': False,
+            'error': 'Failed to fetch all inventories'
+        }
+    except requests.exceptions.RequestException as e:
+        return {
+            'success': False,
+            'error': f'Cannot connect to Inventory Service: {str(e)}'
+        }
+
 def create_order(user_id, items, access_token=None):
     """Create order via Order Service"""
     try:

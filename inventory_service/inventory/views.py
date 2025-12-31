@@ -7,8 +7,8 @@ from django.views import View
 from django.contrib import messages
 
 from .models import Inventory
-from .serializers import InventorySerializer, InventoryUpdateSerializer
-from .utils import get_product_from_service
+from .serializers import InventorySerializer, InventoryUpdateSerializer, SimpleInventorySerializer
+from .utils import get_product_from_service, get_all_products_from_service
 
 class InventoryDetailView(generics.RetrieveAPIView):
     """
@@ -99,19 +99,22 @@ class InventoryUpdateView(generics.GenericAPIView):
             results = []
             errors = []
             
+            # --- Bulk Update Optimization ---
+            # Fetch all products once to avoid N+1 validation requests
+            all_products = get_all_products_from_service()
+            valid_product_ids = {p.get('id') for p in all_products}
+            
             with transaction.atomic():
                 for update_item in updates:
                     product_id = update_item.get('product_id')
                     quantity = update_item.get('quantity')
                     
                     if product_id is None or quantity is None:
-                        errors.append(f"Invalid update item: {update_item}")
                         continue
-                    
-                    # Validate product exists
-                    product = get_product_from_service(product_id)
-                    if not product:
-                        errors.append(f"Product {product_id} does not exist in Product Service.")
+                        
+                    # Bulk Validate product exists
+                    if product_id not in valid_product_ids:
+                        errors.append(f"Product with ID {product_id} does not exist.")
                         continue
                     
                     try:
@@ -148,7 +151,7 @@ class InventoryListView(generics.ListAPIView):
     GET /api/inventory/ - List all inventory records
     """
     queryset = Inventory.objects.all()
-    serializer_class = InventorySerializer
+    serializer_class = SimpleInventorySerializer
 
 # --- Web Interface Views ---
 
