@@ -1,0 +1,63 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard - Inventory Service{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="header-section">
+        <h1 class="title">📋 Danh sách tồn kho</h1>
+        <div class="stats">
+            Tổng cộng: <strong>{{ inventories|length }}</strong> sản phẩm
+        </div>
+    </div>
+
+    {% if messages %}
+    {% for message in messages %}
+    <div class="alert alert-{{ message.tags }}">
+        {{ message }}
+    </div>
+    {% endfor %}
+    {% endif %}
+
+    <table>
+        <thead>
+            <tr>
+                <th>Product ID</th>
+                <th>Số lượng</th>
+                <th>Trạng thái</th>
+                <th>Cập nhật cuối</th>
+                <th>Hành động</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in inventories %}
+            <tr>
+                <td><strong>#{{ item.product_id }}</strong></td>
+                <td>{{ item.quantity }}</td>
+                <td>
+                    {% if item.quantity > 50 %}
+                    <span class="badge badge-success">Sẵn hàng</span>
+                    {% elif item.quantity > 0 %}
+                    <span class="badge badge-warning">Sắp hết</span>
+                    {% else %}
+                    <span class="badge badge-danger">Hết hàng</span>
+                    {% endif %}
+                </td>
+                <td>{{ item.updated_at|date:"d/m/Y H:i" }}</td>
+                <td>
+                    <a href="{% url 'inventory_update_page' item.product_id %}" class="btn btn-primary">
+                        Cập nhật
+                    </a>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="5" style="text-align: center; padding: 3rem;">
+                    Chưa có dữ liệu tồn kho.
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

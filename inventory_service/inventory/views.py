@@ -1,8 +1,10 @@
 from rest_framework import status, generics
 from rest_framework.response import Response
 from rest_framework.decorators import api_view
-from django.shortcuts import get_object_or_404
+from django.shortcuts import render, redirect, get_object_or_404
 from django.db import transaction
+from django.views import View
+from django.contrib import messages
 
 from .models import Inventory
 from .serializers import InventorySerializer, InventoryUpdateSerializer
@@ -147,4 +149,33 @@ class InventoryListView(generics.ListAPIView):
     """
     queryset = Inventory.objects.all()
     serializer_class = InventorySerializer
+
+# --- Web Interface Views ---
+
+class InventoryDashboardView(View):
+    def get(self, request):
+        inventories = Inventory.objects.all()
+        return render(request, 'dashboard.html', {'inventories': inventories})
+
+class InventoryUpdatePageView(View):
+    def get(self, request, product_id):
+        inventory = get_object_or_404(Inventory, product_id=product_id)
+        return render(request, 'update.html', {
+            'product_id': product_id,
+            'current_quantity': inventory.quantity
+        })
+
+class WebInventoryUpdateView(View):
+    def post(self, request):
+        product_id = request.POST.get('product_id')
+        quantity = request.POST.get('quantity')
+        
+        try:
+            inventory = get_object_or_404(Inventory, product_id=product_id)
+            inventory.set_quantity(int(quantity))
+            messages.success(request, f"Đã cập nhật tồn kho cho sản phẩm #{product_id} thành {quantity}.")
+        except Exception as e:
+            messages.error(request, f"Lỗi: {str(e)}")
+            
+        return redirect('inventory_dashboard')
 
