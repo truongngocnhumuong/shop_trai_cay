@@ -3,6 +3,12 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework_simplejwt.views import TokenVerifyView as SimpleJWTTokenVerifyView
 from rest_framework_simplejwt.tokens import RefreshToken
+from django.shortcuts import render, redirect
+from django.contrib.auth import authenticate, login, logout
+from django.contrib import messages
+from django.contrib.auth.decorators import login_required
+from django.utils.decorators import method_decorator
+from django.views import View
 
 from .serializers import (
     UserRegistrationSerializer,
@@ -70,3 +76,85 @@ class TokenVerifyView(SimpleJWTTokenVerifyView):
                 pass
                 
         return response
+
+# --- Web Interface Views ---
+
+class HomeView(View):
+    def get(self, request):
+        return render(request, 'home.html')
+
+class LoginPageView(View):
+    def get(self, request):
+        if request.user.is_authenticated:
+            return redirect('dashboard')
+        return render(request, 'login.html')
+
+class RegisterPageView(View):
+    def get(self, request):
+        if request.user.is_authenticated:
+            return redirect('dashboard')
+        return render(request, 'register.html')
+
+class DashboardView(View):
+    @method_decorator(login_required(login_url='login_page'))
+    def get(self, request):
+        return render(request, 'dashboard.html')
+
+class WebLoginView(View):
+    def post(self, request):
+        username = request.POST.get('username')
+        password = request.POST.get('password')
+        
+        user = authenticate(request, username=username, password=password)
+        
+        if user is not None:
+            login(request, user)
+            messages.success(request, f"Chào mừng trở lại, {username}!")
+            return redirect('dashboard')
+        else:
+            messages.error(request, "Sai tên đăng nhập hoặc mật khẩu.")
+            return redirect('login_page')
+
+class WebRegisterView(View):
+    def post(self, request):
+        username = request.POST.get('username')
+        email = request.POST.get('email')
+        first_name = request.POST.get('first_name')
+        last_name = request.POST.get('last_name')
+        password = request.POST.get('password')
+        password2 = request.POST.get('password2')
+        
+        if password != password2:
+            messages.error(request, "Mật khẩu xác nhận không khớp.")
+            return redirect('register_page')
+            
+        data = {
+            'username': username,
+            'email': email,
+            'first_name': first_name,
+            'last_name': last_name,
+            'password': password,
+            'password2': password2,
+            'role': 'customer'  # Default role for web registrations
+        }
+        
+        serializer = UserRegistrationSerializer(data=data)
+        if serializer.is_valid():
+            user = serializer.save()
+            login(request, user)
+            messages.success(request, "Đăng ký tài khoản thành công!")
+            return redirect('dashboard')
+        else:
+            # Extract first error message
+            error_msg = "Lỗi đăng ký: "
+            for field, errors in serializer.errors.items():
+                error_msg += f"{field}: {errors[0]} "
+                break # Only show first error for simplicity
+            messages.error(request, error_msg)
+            return redirect('register_page')
+
+class LogoutView(View):
+    def get(self, request):
+        logout(request)
+        messages.info(request, "Bạn đã đăng xuất.")
+        return redirect('home')

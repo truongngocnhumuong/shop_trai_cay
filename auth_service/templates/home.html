@@ -1,0 +1,21 @@
+{% extends 'base.html' %}
+
+{% block title %}Trang chủ - Auth Service{% endblock %}
+
+{% block content %}
+<div class="hero">
+    <h1 class="hero-title">🍎 Chào mừng đến với Fruit Shop</h1>
+    <p class="hero-subtitle">
+        Hệ thống quản lý cửa hàng trái cây với kiến trúc SOA hiện đại.
+        Đăng nhập để truy cập các dịch vụ quản lý sản phẩm, đơn hàng và kho hàng.
+    </p>
+    <div class="hero-buttons">
+        {% if user.is_authenticated %}
+        <a href="{% url 'dashboard' %}" class="btn btn-primary">Vào Dashboard</a>
+        {% else %}
+        <a href="{% url 'login_page' %}" class="btn btn-primary">Đăng nhập</a>
+        <a href="{% url 'register_page' %}" class="btn btn-secondary">Đăng ký ngay</a>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

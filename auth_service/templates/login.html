@@ -1,0 +1,53 @@
+{% extends 'base.html' %}
+
+{% block title %}Đăng nhập - Auth Service{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h1 class="card-title">Đăng nhập</h1>
+    <p class="card-subtitle">Chào mừng bạn quay trở lại!</p>
+
+    {% if messages %}
+    {% for message in messages %}
+    <div class="alert alert-{{ message.tags }}">
+        {{ message }}
+    </div>
+    {% endfor %}
+    {% endif %}
+
+    <form method="post" action="{% url 'web_login' %}">
+        {% csrf_token %}
+
+        <div class="form-group">
+            <label for="username" class="form-label">Tên đăng nhập</label>
+            <input type="text" id="username" name="username" class="form-input" placeholder="Nhập tên đăng nhập"
+                required autofocus>
+        </div>
+
+        <div class="form-group">
+            <label for="password" class="form-label">Mật khẩu</label>
+            <input type="password" id="password" name="password" class="form-input" placeholder="Nhập mật khẩu"
+                required>
+        </div>
+
+        <button type="submit" class="btn btn-primary" style="width: 100%;">
+            Đăng nhập
+        </button>
+
+        <p class="text-center mt-2">
+            Chưa có tài khoản? <a href="{% url 'register_page' %}">Đăng ký ngay</a>
+        </p>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Add smooth animation on form submit
+    document.querySelector('form').addEventListener('submit', function (e) {
+        const btn = this.querySelector('button[type="submit"]');
+        btn.textContent = 'Đang xử lý...';
+        btn.disabled = true;
+    });
+</script>
+{% endblock %}

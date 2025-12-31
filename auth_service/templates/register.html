@@ -1,0 +1,96 @@
+{% extends 'base.html' %}
+
+{% block title %}Đăng ký - Auth Service{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h1 class="card-title">Đăng ký</h1>
+    <p class="card-subtitle">Tạo tài khoản mới để bắt đầu</p>
+
+    {% if messages %}
+    {% for message in messages %}
+    <div class="alert alert-{{ message.tags }}">
+        {{ message }}
+    </div>
+    {% endfor %}
+    {% endif %}
+
+    <form method="post" action="{% url 'web_register' %}" id="registerForm">
+        {% csrf_token %}
+
+        <div class="form-group">
+            <label for="username" class="form-label">Tên đăng nhập</label>
+            <input type="text" id="username" name="username" class="form-input" placeholder="Chọn tên đăng nhập"
+                required autofocus minlength="3">
+        </div>
+
+        <div style="display: flex; gap: 1rem;">
+            <div class="form-group" style="flex: 1;">
+                <label for="last_name" class="form-label">Họ</label>
+                <input type="text" id="last_name" name="last_name" class="form-input" placeholder="Họ của bạn">
+            </div>
+            <div class="form-group" style="flex: 1;">
+                <label for="first_name" class="form-label">Tên</label>
+                <input type="text" id="first_name" name="first_name" class="form-input" placeholder="Tên của bạn"
+                    required>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label for="email" class="form-label">Email</label>
+            <input type="email" id="email" name="email" class="form-input" placeholder="email@example.com" required>
+        </div>
+
+        <div class="form-group">
+            <label for="password" class="form-label">Mật khẩu</label>
+            <input type="password" id="password" name="password" class="form-input" placeholder="Tạo mật khẩu mạnh"
+                required minlength="6">
+        </div>
+
+        <div class="form-group">
+            <label for="password2" class="form-label">Xác nhận mật khẩu</label>
+            <input type="password" id="password2" name="password2" class="form-input" placeholder="Nhập lại mật khẩu"
+                required minlength="6">
+        </div>
+
+        <button type="submit" class="btn btn-primary" style="width: 100%;">
+            Đăng ký
+        </button>
+
+        <p class="text-center mt-2">
+            Đã có tài khoản? <a href="{% url 'login_page' %}">Đăng nhập</a>
+        </p>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const form = document.getElementById('registerForm');
+    const password = document.getElementById('password');
+    const password2 = document.getElementById('password2');
+
+    // Validate password match
+    form.addEventListener('submit', function (e) {
+        if (password.value !== password2.value) {
+            e.preventDefault();
+            alert('Mật khẩu xác nhận không khớp!');
+            password2.focus();
+            return false;
+        }
+
+        const btn = this.querySelector('button[type="submit"]');
+        btn.textContent = 'Đang xử lý...';
+        btn.disabled = true;
+    });
+
+    // Real-time password match validation
+    password2.addEventListener('input', function () {
+        if (password.value !== password2.value) {
+            password2.style.borderColor = 'rgba(255, 59, 48, 0.6)';
+        } else {
+            password2.style.borderColor = 'rgba(52, 199, 89, 0.6)';
+        }
+    });
+</script>
+{% endblock %}
