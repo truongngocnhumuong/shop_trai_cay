@@ -1,0 +1,162 @@
+{% extends 'base.html' %}
+
+{% block title %}
+    {% if product %}Chỉnh sửa: {{ product.name }}{% else %}Thêm sản phẩm mới{% endif %}
+{% endblock %}
+
+{% block extra_css %}
+.form-container {
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+.form-group {
+    margin-bottom: 25px;
+}
+
+.form-group label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 8px;
+    color: var(--text-dark);
+}
+
+.form-control {
+    width: 100%;
+    padding: 12px 15px;
+    border: 1px solid #ddd;
+    border-radius: 12px;
+    font-size: 16px;
+    transition: 0.3s;
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 4px rgba(255, 75, 92, 0.1);
+}
+
+select.form-control {
+    background: white;
+}
+
+.image-preview {
+    width: 100%;
+    height: 200px;
+    border: 2px dashed #ddd;
+    border-radius: 15px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 10px;
+    overflow: hidden;
+    position: relative;
+}
+
+.image-preview img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.btn-submit {
+    width: 100%;
+    background: var(--primary-color);
+    color: white;
+    border: none;
+    padding: 15px;
+    border-radius: 12px;
+    font-size: 18px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.3s;
+    margin-top: 20px;
+}
+
+.btn-submit:hover {
+    background: #e63946;
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(255, 75, 92, 0.3);
+}
+
+.btn-back {
+    display: block;
+    text-align: center;
+    margin-top: 20px;
+    color: var(--text-muted);
+    text-decoration: none;
+    font-weight: 500;
+}
+{% endblock %}
+
+{% block content %}
+<div class="form-container">
+    <div class="glass-card">
+        <h2 style="font-size: 28px; margin-bottom: 30px; text-align: center; color: var(--text-dark);">
+            <i class="fas {% if product %}fa-edit{% else %}fa-plus-circle{% endif %}" style="color: var(--primary-color);"></i>
+            {% if product %}Chỉnh sửa sản phẩm{% else %}Thêm sản phẩm mới{% endif %}
+        </h2>
+
+        <form method="POST" enctype="multipart/form-data">
+            {% csrf_token %}
+            
+            <div class="form-group">
+                <label for="name">Tên sản phẩm</label>
+                <input type="text" name="name" id="name" class="form-control" required 
+                       value="{% if product %}{{ product.name }}{% endif %}" placeholder="Ví dụ: Táo Đỏ Mỹ">
+            </div>
+
+            <div class="form-group">
+                <label for="price">Giá bán (VNĐ)</label>
+                <input type="number" name="price" id="price" class="form-control" required step="0.01"
+                       value="{% if product %}{{ product.price|stringformat:'.2f' }}{% endif %}" placeholder="0.00">
+            </div>
+
+            <div class="form-group">
+                <label for="category">Danh mục</label>
+                <select name="category" id="category" class="form-control" required>
+                    {% for val, label in categories %}
+                        <option value="{{ val }}" {% if product and product.category == val %}selected{% endif %}>
+                            {{ label }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="image">Hình ảnh</label>
+                <input type="file" name="image" id="image" class="form-control" accept="image/*" onchange="previewImage(event)">
+                <div class="image-preview" id="preview-container">
+                    {% if product and product.image %}
+                        <img src="{{ product.image.url }}" id="preview-img">
+                    {% else %}
+                        <i class="fas fa-cloud-arrow-up fa-3x" style="color: #ccc;"></i>
+                    {% endif %}
+                </div>
+            </div>
+
+            <button type="submit" class="btn-submit">
+                <i class="fas fa-save"></i> Lưu sản phẩm
+            </button>
+
+            <a href="/" class="btn-back"><i class="fas fa-arrow-left"></i> Quay lại danh sách</a>
+        </form>
+    </div>
+</div>
+
+<script>
+    function previewImage(event) {
+        const reader = new FileReader();
+        const icon = document.querySelector('#preview-container i');
+        const img = document.querySelector('#preview-img') || document.createElement('img');
+        
+        reader.onload = function(){
+            if(icon) icon.remove();
+            img.id = 'preview-img';
+            img.src = reader.result;
+            document.getElementById('preview-container').appendChild(img);
+        }
+        reader.readAsDataURL(event.target.files[0]);
+    }
+</script>
+{% endblock %}

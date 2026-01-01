@@ -1,0 +1,155 @@
+{% extends 'base.html' %}
+
+{% block title %}Danh sách sản phẩm - Product Manager{% endblock %}
+
+{% block extra_css %}
+.product-grid {
+display: grid;
+grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+gap: 30px;
+}
+
+.product-card {
+background: white;
+border-radius: 20px;
+overflow: hidden;
+transition: 0.3s;
+border: 1px solid #eee;
+display: flex;
+flex-direction: column;
+}
+
+.product-card:hover {
+transform: translateY(-10px);
+box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+}
+
+.product-image {
+width: 100%;
+height: 200px;
+object-fit: cover;
+}
+
+.product-info {
+padding: 20px;
+flex-grow: 1;
+}
+
+.product-info h3 {
+font-size: 18px;
+margin-bottom: 8px;
+color: var(--text-dark);
+}
+
+.category-badge {
+display: inline-block;
+padding: 4px 12px;
+background: #f1f2f6;
+border-radius: 50px;
+font-size: 12px;
+color: var(--text-muted);
+margin-bottom: 12px;
+}
+
+.price-tag {
+font-size: 20px;
+font-weight: 700;
+color: var(--primary-color);
+margin-bottom: 15px;
+}
+
+.card-actions {
+display: flex;
+gap: 10px;
+padding: 20px;
+background: #fafafa;
+border-top: 1px solid #eee;
+}
+
+.btn-icon {
+width: 40px;
+height: 40px;
+display: flex;
+align-items: center;
+justify-content: center;
+border-radius: 12px;
+text-decoration: none;
+transition: 0.2s;
+}
+
+.btn-edit {
+background: #e3f2fd;
+color: #1976d2;
+}
+
+.btn-delete {
+background: #ffebee;
+color: #d32f2f;
+}
+
+.btn-icon:hover {
+transform: scale(1.1);
+}
+
+.empty-state {
+text-align: center;
+padding: 100px 0;
+}
+
+.empty-state i {
+font-size: 80px;
+color: rgba(255, 75, 92, 0.2);
+margin-bottom: 20px;
+}
+{% endblock %}
+
+{% block content %}
+<div class="glass-card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 40px;">
+        <h2 style="font-size: 28px; color: var(--text-dark);">
+            <i class="fas fa-boxes-stacked" style="color: var(--primary-color);"></i> Danh sách sản phẩm
+        </h2>
+        <span style="color: var(--text-muted);">Tổng cộng: {{ products|length }} sản phẩm</span>
+    </div>
+
+    {% if products %}
+    <div class="product-grid">
+        {% for product in products %}
+        <div class="product-card">
+            {% if product.image %}
+            <img src="{{ product.image.url }}" class="product-image" alt="{{ product.name }}">
+            {% else %}
+            <div class="product-image"
+                style="background: #f1f2f6; display: flex; align-items: center; justify-content: center;">
+                <i class="fas fa-image fa-3x" style="color: #ccc;"></i>
+            </div>
+            {% endif %}
+
+            <div class="product-info">
+                <span class="category-badge">{{ product.get_category_display }}</span>
+                <h3>{{ product.name }}</h3>
+                <div class="price-tag">{{ product.price|floatformat:2 }} VNĐ</div>
+            </div>
+
+            <div class="card-actions">
+                <a href="/edit/{{ product.id }}/" class="btn-icon btn-edit" title="Chỉnh sửa">
+                    <i class="fas fa-edit"></i>
+                </a>
+                <a href="/delete/{{ product.id }}/" class="btn-icon btn-delete" title="Xóa"
+                    onclick="return confirm('Bạn có chắc chắn muốn xóa sản phẩm này?')">
+                    <i class="fas fa-trash"></i>
+                </a>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <i class="fas fa-basket-shopping"></i>
+        <p style="font-size: 18px; color: var(--text-muted);">Chưa có sản phẩm nào được tạo.</p>
+        <a href="/add/" class="btn-add" style="display: inline-block; margin-top: 20px; text-decoration: none;">Thêm sản
+            phẩm đầu tiên</a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
