@@ -118,7 +118,28 @@ class OrderListView(View):
 class OrderDetailWebView(View):
     def get(self, request, pk):
         order = get_object_or_404(Order, pk=pk)
-        return render(request, 'orders/order_detail.html', {'order': order})
+        
+        # Enrich order with username
+        user_data = get_user_info(order.user_id)
+        order.username = user_data.get('username', f"User {order.user_id}") if user_data else f"User {order.user_id}"
+        
+        # Enrich order items with product info - CREATE A LIST to prevent re-query in template
+        items = list(order.order_items.all())
+        for item in items:
+            product_data = get_product_from_service(item.product_id)
+            if product_data:
+                item.product_info = {
+                    'name': product_data.get('name'),
+                    # Use 'image_url' from serializer or fallback to 'image'
+                    'image_url': product_data.get('image_url') or product_data.get('image'),
+                }
+            else:
+                item.product_info = None
+                
+        return render(request, 'orders/order_detail.html', {
+            'order': order,
+            'items': items
+        })
     
     def post(self, request, pk):
         order = get_object_or_404(Order, pk=pk)
