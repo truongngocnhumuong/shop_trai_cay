@@ -8,6 +8,7 @@ from django.db.models import Q
 
 from .models import Product
 from .serializers import ProductSerializer
+from .utils import notify_inventory_service
 
 class ProductListCreateView(generics.ListCreateAPIView):
     """
@@ -17,6 +18,11 @@ class ProductListCreateView(generics.ListCreateAPIView):
     queryset = Product.objects.all()
     serializer_class = ProductSerializer
     
+    def perform_create(self, serializer):
+        """Notify inventory service after creating product via API"""
+        product = serializer.save()
+        notify_inventory_service(product.id, 'create')
+
     def get_serializer_context(self):
         """Add request to serializer context for image URL generation"""
         context = super().get_serializer_context()
@@ -32,6 +38,12 @@ class ProductDetailView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Product.objects.all()
     serializer_class = ProductSerializer
     
+    def perform_destroy(self, instance):
+        """Notify inventory service before deleting product via API"""
+        product_id = instance.id
+        notify_inventory_service(product_id, 'delete')
+        instance.delete()
+
     def get_serializer_context(self):
         """Add request to serializer context for image URL generation"""
         context = super().get_serializer_context()
@@ -58,12 +70,15 @@ class ProductCreatePageView(View):
         image = request.FILES.get('image')
         
         try:
-            Product.objects.create(
+            product = Product.objects.create(
                 name=name,
                 price=price,
                 category=category,
                 image=image
             )
+            # Notify inventory service
+            notify_inventory_service(product.id, 'create')
+            
             messages.success(request, f"Đã thêm sản phẩm '{name}' thành công.")
             return redirect('product_dashboard')
         except Exception as e:
@@ -104,6 +119,8 @@ class ProductDeleteWebView(View):
     def get(self, request, pk):
         product = get_object_or_404(Product, pk=pk)
         name = product.name
+        # Notify inventory service before deleting
+        notify_inventory_service(pk, 'delete')
         product.delete()
         messages.success(request, f"Đã xóa sản phẩm '{name}'.")
         return redirect('product_dashboard')

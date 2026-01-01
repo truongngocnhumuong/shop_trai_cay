@@ -10,7 +10,7 @@ from .models import Inventory
 from .serializers import InventorySerializer, InventoryUpdateSerializer, SimpleInventorySerializer
 from .utils import get_product_from_service, get_all_products_from_service
 
-class InventoryDetailView(generics.RetrieveAPIView):
+class InventoryDetailView(generics.RetrieveDestroyAPIView):
     """
     GET /api/inventory/{product_id}/ - Get inventory for a specific product
     """

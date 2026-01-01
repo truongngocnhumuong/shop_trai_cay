@@ -110,3 +110,5 @@ REST_FRAMEWORK = {
 CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOW_CREDENTIALS = True
 
+# Service URLs (SOA Configuration)
+INVENTORY_SERVICE_URL = 'http://localhost:8004'

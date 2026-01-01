@@ -189,10 +189,19 @@ def create_order(user_id, items, access_token=None):
                 'data': response.json()
             }
         else:
-            error_data = response.json() if response.content else {}
+            # Check if response is JSON
+            try:
+                error_data = response.json() if response.content else {}
+                error_msg = error_data.get('detail', 'Failed to create order')
+            except ValueError:
+                # If not JSON (e.g. HTML 404 page), provide a better message
+                error_msg = f"Order Service returned an unexpected response (Status {response.status_code})."
+                if response.status_code == 404:
+                    error_msg = "Order Service endpoint not found (404). Please check service configuration."
+                
             return {
                 'success': False,
-                'error': error_data.get('detail', 'Failed to create order'),
+                'error': error_msg,
                 'status_code': response.status_code
             }
     except requests.exceptions.RequestException as e:
