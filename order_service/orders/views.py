@@ -1,7 +1,8 @@
+from django.shortcuts import get_object_or_404, render, redirect
+from django.views import View
+from django.contrib import messages
 from rest_framework import status, generics
 from rest_framework.response import Response
-from rest_framework.decorators import api_view
-from django.shortcuts import get_object_or_404
 
 from .models import Order, OrderItem
 from .serializers import (
@@ -9,26 +10,12 @@ from .serializers import (
     OrderCreateSerializer,
     OrderItemSerializer
 )
-from .utils import get_product_from_service
+from .utils import get_product_from_service, get_all_products_from_service, get_user_info
 
 class OrderListCreateView(generics.ListCreateAPIView):
     """
     GET /api/orders/ - List all orders
-    
     POST /api/orders/ - Create a new order
-    
-    **Request Body Example:**
-    ```json
-    {
-        "user_id": 1,
-        "items": [
-            {"product_id": 1, "quantity": 2},
-            {"product_id": 2, "quantity": 3}
-        ]
-    }
-    ```
-    
-    **Note:** Sử dụng tab "Raw data" để nhập JSON. HTML form không hỗ trợ nested lists.
     """
     queryset = Order.objects.all()
     
@@ -77,8 +64,6 @@ class OrderItemListView(generics.ListAPIView):
 class OrderItemDetailView(generics.RetrieveUpdateDestroyAPIView):
     """
     GET /api/orders/{order_id}/items/{id}/ - Retrieve an order item
-    PUT /api/orders/{order_id}/items/{id}/ - Update an order item
-    DELETE /api/orders/{order_id}/items/{id}/ - Delete an order item
     """
     serializer_class = OrderItemSerializer
     
@@ -91,7 +76,6 @@ class OrderItemDetailView(generics.RetrieveUpdateDestroyAPIView):
         partial = kwargs.pop('partial', False)
         instance = self.get_object()
         
-        # If quantity is being updated, get current product price
         if 'quantity' in request.data:
             product = get_product_from_service(instance.product_id)
             if product:
@@ -101,9 +85,7 @@ class OrderItemDetailView(generics.RetrieveUpdateDestroyAPIView):
         serializer.is_valid(raise_exception=True)
         self.perform_update(serializer)
         
-        # Recalculate order total
         instance.order.calculate_total()
-        
         return Response(serializer.data)
     
     def destroy(self, request, *args, **kwargs):
@@ -111,9 +93,71 @@ class OrderItemDetailView(generics.RetrieveUpdateDestroyAPIView):
         instance = self.get_object()
         order = instance.order
         self.perform_destroy(instance)
-        
-        # Recalculate order total
         order.calculate_total()
-        
         return Response(status=status.HTTP_204_NO_CONTENT)
 
+
+# --- Web Interface Views ---
+
+class OrderListView(View):
+    def get(self, request):
+        orders = Order.objects.all().order_by('-created_at')
+        
+        # Enrich orders with usernames
+        # Optimization: cache user info to avoid duplicate requests
+        user_cache = {}
+        for order in orders:
+            if order.user_id not in user_cache:
+                user_data = get_user_info(order.user_id)
+                user_cache[order.user_id] = user_data.get('username', f"User {order.user_id}") if user_data else f"User {order.user_id}"
+            
+            order.username = user_cache[order.user_id]
+            
+        return render(request, 'orders/order_list.html', {'orders': orders})
+
+class OrderDetailWebView(View):
+    def get(self, request, pk):
+        order = get_object_or_404(Order, pk=pk)
+        return render(request, 'orders/order_detail.html', {'order': order})
+    
+    def post(self, request, pk):
+        order = get_object_or_404(Order, pk=pk)
+        new_status = request.POST.get('status')
+        if new_status in dict(Order.STATUS_CHOICES):
+            order.status = new_status
+            order.save()
+            messages.success(request, f"Đã cập nhật trạng thái đơn hàng #{order.id} thành {order.get_status_display()}.")
+        return redirect('order-detail-web', pk=pk)
+
+class OrderCreateWebView(View):
+    def get(self, request):
+        products = get_all_products_from_service()
+        return render(request, 'orders/order_form.html', {'products': products})
+    
+    def post(self, request):
+        user_id = request.POST.get('user_id')
+        product_ids = request.POST.getlist('product_ids[]')
+        quantities = request.POST.getlist('quantities[]')
+        
+        items = []
+        for pid, qty in zip(product_ids, quantities):
+            if pid and qty:
+                items.append({'product_id': int(pid), 'quantity': int(qty)})
+        
+        if not items:
+            messages.error(request, "Vui lòng chọn ít nhất một sản phẩm.")
+            return self.get(request)
+            
+        serializer = OrderCreateSerializer(data={
+            'user_id': user_id,
+            'items': items
+        })
+        
+        if serializer.is_valid():
+            order = serializer.save()
+            messages.success(request, f"Đặt hàng thành công! Mã đơn hàng: #{order.id}")
+            return redirect('order-list-web')
+        else:
+            error_msg = str(serializer.errors)
+            messages.error(request, f"Lỗi khi đặt hàng: {error_msg}")
+            return self.get(request)

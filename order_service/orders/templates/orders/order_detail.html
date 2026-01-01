@@ -1,0 +1,101 @@
+{% extends 'orders/base.html' %}
+
+{% block title %}Đơn hàng #{{ order.id }} - Fruit Shop{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 1.5rem;">
+    <a href="{% url 'order-list-web' %}" style="text-decoration: none; color: var(--primary); font-weight: 600;">&larr;
+        Quay lại danh sách</a>
+</div>
+
+<div class="glass-card">
+    <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 2rem;">
+        <div>
+            <h1>Chi tiết đơn hàng #{{ order.id }}</h1>
+            <p style="color: #777;">Ngày tạo: {{ order.created_at|date:"d/m/Y H:i" }}</p>
+        </div>
+        <span class="status-badge status-{{ order.status }}" style="font-size: 1.1rem; padding: 0.6rem 1.2rem;">
+            {{ order.get_status_display }}
+        </span>
+    </div>
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-bottom: 2rem;">
+        <div style="background: rgba(0,0,0,0.02); padding: 1.5rem; border-radius: 15px;">
+            <h3 style="margin-bottom: 1rem;">Thông tin khách hàng</h3>
+            <p><strong>User ID:</strong> {{ order.user_id }}</p>
+        </div>
+        <div style="background: rgba(0,0,0,0.02); padding: 1.5rem; border-radius: 15px;">
+            <h3 style="margin-bottom: 1rem;">Tóm tắt thanh toán</h3>
+            <p style="font-size: 1.5rem; color: var(--primary); font-weight: 700;">{{ order.total_price }} VNĐ</p>
+        </div>
+    </div>
+
+    <h3>Sản phẩm đã chọn</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>Ảnh</th>
+                <th>Sản phẩm</th>
+                <th>Đơn giá</th>
+                <th>Số lượng</th>
+                <th>Thành tiền</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in order.order_items.all %}
+            <tr>
+                <td>
+                    {% if item.product_info.image_url %}
+                    <img src="{{ item.product_info.image_url }}" alt="{{ item.product_info.name }}"
+                        style="width: 50px; height: 50px; object-fit: cover; border-radius: 10px;">
+                    {% else %}
+                    <div
+                        style="width: 50px; height: 50px; background: #eee; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 0.7rem;">
+                        No Image</div>
+                    {% endif %}
+                </td>
+                <td>
+                    <div><strong>{{ item.product_info.name|default:"Sản phẩm không xác định" }}</strong></div>
+                    <small style="color: #777;">ID: {{ item.product_id }}</small>
+                </td>
+                <td>{{ item.price }} VNĐ</td>
+                <td>{{ item.quantity }}</td>
+                <td><strong>{{ item.subtotal }} VNĐ</strong></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+        <tfoot>
+            <tr>
+                <td colspan="4" style="text-align: right; font-weight: 700; font-size: 1.1rem; padding-top: 2rem;">Tổng
+                    cộng:</td>
+                <td style="font-weight: 700; font-size: 1.1rem; color: var(--primary); padding-top: 2rem;">{{
+                    order.total_price }} VNĐ</td>
+            </tr>
+        </tfoot>
+    </table>
+</div>
+
+{% if order.status == 'pending' %}
+<div class="glass-card" style="display: flex; gap: 1rem; justify-content: flex-end;">
+    <form action="{% url 'order-detail-web' order.id %}" method="POST" style="display: inline;">
+        {% csrf_token %}
+        <input type="hidden" name="status" value="cancelled">
+        <button type="submit" class="btn btn-outline" style="border-color: #ff7675; color: #ff7675;">Hủy đơn
+            hàng</button>
+    </form>
+    <form action="{% url 'order-detail-web' order.id %}" method="POST" style="display: inline;">
+        {% csrf_token %}
+        <input type="hidden" name="status" value="processing">
+        <button type="submit" class="btn btn-primary" style="background: var(--secondary);">Xác nhận xử lý</button>
+    </form>
+</div>
+{% elif order.status == 'processing' %}
+<div class="glass-card" style="display: flex; gap: 1rem; justify-content: flex-end;">
+    <form action="{% url 'order-detail-web' order.id %}" method="POST" style="display: inline;">
+        {% csrf_token %}
+        <input type="hidden" name="status" value="completed">
+        <button type="submit" class="btn btn-primary" style="background: #27ae60;">Hoàn thành đơn hàng</button>
+    </form>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,93 @@
+{% extends 'orders/base.html' %}
+
+{% block title %}Tạo đơn hàng mới - Fruit Shop{% endblock %}
+
+{% block extra_css %}
+.product-row {
+background: rgba(0,0,0,0.02);
+padding: 1rem;
+border-radius: 12px;
+margin-bottom: 1rem;
+display: grid;
+grid-template-columns: 2fr 1fr auto;
+gap: 1rem;
+align-items: end;
+}
+.remove-btn {
+color: #ff7675;
+cursor: pointer;
+font-weight: 700;
+padding: 0.5rem;
+}
+{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 1.5rem;">
+    <a href="{% url 'order-list-web' %}" style="text-decoration: none; color: var(--primary); font-weight: 600;">&larr;
+        Quay lại danh sách</a>
+</div>
+
+<div class="glass-card">
+    <h1>Tạo đơn hàng mới</h1>
+
+    <form action="{% url 'order-create-web' %}" method="POST" id="orderForm">
+        {% csrf_token %}
+
+        <div class="form-group">
+            <label for="user_id">ID Người dùng (từ Auth Service)</label>
+            <input type="number" name="user_id" id="user_id" required placeholder="Ví dụ: 1">
+        </div>
+
+        <div style="margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center;">
+            <h3>Sản phẩm trong đơn hàng</h3>
+            <button type="button" class="btn btn-outline" style="padding: 0.4rem 0.8rem; font-size: 0.9rem;"
+                onclick="addProductRow()">+ Thêm sản phẩm</button>
+        </div>
+
+        <div id="productRows">
+            <div class="product-row">
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label>Sản phẩm</label>
+                    <select name="product_ids[]" required>
+                        <option value="">-- Chọn sản phẩm --</option>
+                        {% for product in products %}
+                        <option value="{{ product.id }}">{{ product.name }} - {{ product.price }} VNĐ</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label>Số lượng</label>
+                    <input type="number" name="quantities[]" min="1" value="1" required>
+                </div>
+                <div class="remove-btn" onclick="this.parentElement.remove()" style="visibility: hidden;">&times;</div>
+            </div>
+        </div>
+
+        <div
+            style="margin-top: 2rem; border-top: 1px solid rgba(0,0,0,0.1); padding-top: 2rem; display: flex; justify-content: flex-end;">
+            <button type="submit" class="btn btn-primary" style="padding: 1rem 3rem; font-size: 1.1rem;">Xác nhận đặt
+                hàng</button>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function addProductRow() {
+        const container = document.getElementById('productRows');
+        const firstRow = container.querySelector('.product-row');
+        const newRow = firstRow.cloneNode(true);
+
+        // Reset values
+        newRow.querySelector('select').value = '';
+        newRow.querySelector('input').value = '1';
+
+        // Make remove button visible
+        const removeBtn = newRow.querySelector('.remove-btn');
+        removeBtn.style.visibility = 'visible';
+
+        container.appendChild(newRow);
+    }
+</script>
+{% endblock %}

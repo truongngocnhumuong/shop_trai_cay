@@ -12,7 +12,8 @@ from users.views import (
     DashboardView,
     WebLoginView,
     WebRegisterView,
-    LogoutView
+    LogoutView,
+    UserDetailView
 )
 
 urlpatterns = [
@@ -31,4 +32,5 @@ urlpatterns = [
     path('api/login/', UserLoginView.as_view(), name='login'),
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('api/verify-token/', TokenVerifyView.as_view(), name='token_verify'),
+    path('api/users/<int:pk>/', UserDetailView.as_view(), name='user_detail'),
 ]

@@ -1,0 +1,53 @@
+{% extends 'orders/base.html' %}
+
+{% block title %}Danh sách đơn hàng - Fruit Shop{% endblock %}
+
+{% block content %}
+<div class="glass-card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+        <h1>Danh sách đơn hàng</h1>
+        <a href="{% url 'order-create-web' %}" class="btn btn-primary">Tạo đơn hàng mới</a>
+    </div>
+
+    {% if orders %}
+    <table>
+        <thead>
+            <tr>
+                <th>Mã đơn</th>
+                <th>Người dùng</th>
+                <th>Tổng tiền</th>
+                <th>Trạng thái</th>
+                <th>Ngày tạo</th>
+                <th>Thao tác</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for order in orders %}
+            <tr>
+                <td><strong>#{{ order.id }}</strong></td>
+                <td>{{ order.username }}</td>
+                <td>{{ order.total_price }} VNĐ</td>
+                <td>
+                    <span class="status-badge status-{{ order.status }}">
+                        {{ order.get_status_display }}
+                    </span>
+                </td>
+                <td>{{ order.created_at|date:"d/m/Y H:i" }}</td>
+                <td>
+                    <a href="{% url 'order-detail-web' order.id %}" class="btn btn-outline"
+                        style="padding: 0.4rem 0.8rem; font-size: 0.9rem;">Chi tiết</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div style="text-align: center; padding: 3rem;">
+        <p style="font-size: 1.2rem; color: #777;">Chưa có đơn hàng nào.</p>
+        <div style="margin-top: 1.5rem;">
+            <a href="{% url 'order-create-web' %}" class="btn btn-primary">Tạo đơn hàng đầu tiên</a>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

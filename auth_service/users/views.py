@@ -11,10 +11,12 @@ from django.utils.decorators import method_decorator
 from django.views import View
 
 from .serializers import (
-    UserRegistrationSerializer,
     CustomTokenObtainPairSerializer,
     UserSerializer
 )
+from django.contrib.auth import get_user_model
+User = get_user_model()
+
 
 class UserRegistrationView(APIView):
     """
@@ -158,3 +160,17 @@ class LogoutView(View):
         logout(request)
         messages.info(request, "Bạn đã đăng xuất.")
         return redirect('home')
+
+class UserDetailView(APIView):
+    """
+    Get user details by ID
+    """
+    permission_classes = [permissions.AllowAny] # In production, restrict this
+    
+    def get(self, request, pk):
+        try:
+            user = User.objects.get(pk=pk)
+            serializer = UserSerializer(user)
+            return Response(serializer.data)
+        except User.DoesNotExist:
+            return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
