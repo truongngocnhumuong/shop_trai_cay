@@ -1,16 +1,54 @@
-"""
-Utility functions for communicating with other services
-"""
 import time
 import requests
+import sys
+import os
+import logging
 from django.conf import settings
 from django.contrib import messages
+
+logger = logging.getLogger(__name__)
+
+# Add common module to path
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
+
+def get_service_url(service_name):
+    """
+    Get service URL using Consul discovery or fallback to hardcoded URL
+    """
+    # Try Consul discovery if enabled
+    if getattr(settings, 'USE_CONSUL', False):
+        try:
+            from common.consul_client import get_consul_client
+            
+            consul_client = get_consul_client()
+            url = consul_client.discover_service(service_name)
+            
+            if url:
+                logger.debug(f"Discovered {service_name} via Consul: {url}")
+                return url
+            else:
+                logger.warning(f"Consul discovery failed for {service_name}, using fallback")
+        except Exception as e:
+            logger.warning(f"Error during Consul discovery for {service_name}: {e}, using fallback")
+    
+    # Fallback to hardcoded URLs from settings
+    fallback_map = {
+        'auth-service': settings.AUTH_SERVICE_URL,
+        'product-service': settings.PRODUCT_SERVICE_URL,
+        'order-service': settings.ORDER_SERVICE_URL,
+        'inventory-service': settings.INVENTORY_SERVICE_URL,
+    }
+    
+    fallback_url = fallback_map.get(service_name, '')
+    logger.debug(f"Using fallback URL for {service_name}: {fallback_url}")
+    return fallback_url
 
 
 def call_auth_service_login(username, password):
     """Call Auth Service to login user"""
     try:
-        url = f'{settings.AUTH_SERVICE_URL}/api/login/'
+        base_url = get_service_url('auth-service')
+        url = f'{base_url}/api/login/'
         response = requests.post(url, json={
             'username': username,
             'password': password
@@ -35,7 +73,8 @@ def call_auth_service_login(username, password):
 def call_auth_service_verify_token(token):
     """Call Auth Service to verify token"""
     try:
-        url = f'{settings.AUTH_SERVICE_URL}/api/verify-token/'
+        base_url = get_service_url('auth-service')
+        url = f'{base_url}/api/verify-token/'
         response = requests.post(url, json={'token': token}, timeout=5)
         
         if response.status_code == 200:
@@ -58,7 +97,8 @@ def get_products():
     try:
         # Add timestamp to prevent caching
         timestamp = int(time.time())
-        url = f'{settings.PRODUCT_SERVICE_URL}/api/products/'
+        base_url = get_service_url('product-service')
+        url = f'{base_url}/api/products/'
         params = {'_': timestamp}  # Prevent caching
         
         response = requests.get(url, params=params, timeout=5)
@@ -84,7 +124,8 @@ def get_products():
 def get_product(product_id):
     """Get a single product from Product Service"""
     try:
-        url = f'{settings.PRODUCT_SERVICE_URL}/api/products/{product_id}/'
+        base_url = get_service_url('product-service')
+        url = f'{base_url}/api/products/{product_id}/'
         response = requests.get(url, timeout=5)
         
         if response.status_code == 200:
@@ -106,7 +147,8 @@ def get_inventory(product_id):
     """Get inventory for a product from Inventory Service"""
     try:
         # Call the correct endpoint with product_id as path parameter
-        url = f'{settings.INVENTORY_SERVICE_URL}/api/inventory/{product_id}/'
+        base_url = get_service_url('inventory-service')
+        url = f'{base_url}/api/inventory/{product_id}/'
         
         response = requests.get(url, timeout=5)
         
@@ -135,7 +177,8 @@ def get_inventory(product_id):
 def get_all_inventories():
     """Get all inventory records from Inventory Service"""
     try:
-        url = f'{settings.INVENTORY_SERVICE_URL}/api/inventory/'
+        base_url = get_service_url('inventory-service')
+        url = f'{base_url}/api/inventory/'
         response = requests.get(url, timeout=5)
         
         if response.status_code == 200:
@@ -159,7 +202,8 @@ def get_all_inventories():
 def create_order(user_id, items, access_token=None):
     """Create order via Order Service"""
     try:
-        url = f'{settings.ORDER_SERVICE_URL}/api/orders/'
+        base_url = get_service_url('order-service')
+        url = f'{base_url}/api/orders/'
         headers = {'Content-Type': 'application/json'}
         if access_token:
             headers['Authorization'] = f'Bearer {access_token}'

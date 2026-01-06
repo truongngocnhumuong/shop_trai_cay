@@ -6,7 +6,8 @@ from products.views import (
     ProductDashboardView,
     ProductCreatePageView,
     ProductUpdatePageView,
-    ProductDeleteWebView
+    ProductDeleteWebView,
+    health_check
 )
 
 urlpatterns = [
@@ -19,6 +20,9 @@ urlpatterns = [
     # API Endpoints
     path('admin/', admin.site.urls),
     path('api/products/', include('products.urls')),
+    
+    # Health check for Consul
+    path('health', health_check, name='health_check'),
 ]
 
 if settings.DEBUG:

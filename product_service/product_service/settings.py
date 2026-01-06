@@ -14,6 +14,7 @@ ALLOWED_HOSTS = ['*']
 
 # Application definition
 INSTALLED_APPS = [
+    'product_service.apps.ProductServiceConfig',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -110,5 +111,11 @@ REST_FRAMEWORK = {
 CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOW_CREDENTIALS = True
 
-# Service URLs (SOA Configuration)
-INVENTORY_SERVICE_URL = 'http://localhost:8004'
+# Service URLs (SOA Configuration - Fallback when Consul unavailable)
+INVENTORY_SERVICE_URL = os.getenv('INVENTORY_SERVICE_URL', 'http://localhost:8004')
+
+# --- Consul Service Discovery Configuration ---
+USE_CONSUL = os.getenv('USE_CONSUL', 'false').lower() == 'true'
+CONSUL_HOST = os.getenv('CONSUL_HOST', 'localhost')
+CONSUL_PORT = int(os.getenv('CONSUL_PORT', '8500'))
+SERVICE_ADDRESS = os.getenv('SERVICE_ADDRESS', 'localhost')

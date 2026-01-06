@@ -2,8 +2,55 @@
 Utility functions for communicating with other services
 """
 import requests
+import sys
+import os
+import logging
 from django.conf import settings
 from rest_framework import status
+
+logger = logging.getLogger(__name__)
+
+# Add common module to path
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
+
+
+def get_service_url(service_name):
+    """
+    Get service URL using Consul discovery or fallback to hardcoded URL
+    
+    Args:
+        service_name: Name of the service (e.g., 'product-service', 'auth-service')
+    
+    Returns:
+        Base URL of the service (e.g., 'http://localhost:8002')
+    """
+    # Try Consul discovery if enabled
+    if getattr(settings, 'USE_CONSUL', False):
+        try:
+            from common.consul_client import get_consul_client
+            
+            consul_client = get_consul_client()
+            url = consul_client.discover_service(service_name)
+            
+            if url:
+                logger.debug(f"Discovered {service_name} via Consul: {url}")
+                return url
+            else:
+                logger.warning(f"Consul discovery failed for {service_name}, using fallback")
+        except Exception as e:
+            logger.warning(f"Error during Consul discovery for {service_name}: {e}, using fallback")
+    
+    # Fallback to hardcoded URLs from settings
+    fallback_map = {
+        'product-service': settings.PRODUCT_SERVICE_URL,
+        'auth-service': settings.AUTH_SERVICE_URL,
+        'inventory-service': settings.INVENTORY_SERVICE_URL,
+    }
+    
+    fallback_url = fallback_map.get(service_name, '')
+    logger.debug(f"Using fallback URL for {service_name}: {fallback_url}")
+    return fallback_url
+
 
 def get_product_from_service(product_id):
     """
@@ -11,26 +58,29 @@ def get_product_from_service(product_id):
     Returns product data or None if not found
     """
     try:
-        url = f'{settings.PRODUCT_SERVICE_URL}/api/products/{product_id}/'
+        base_url = get_service_url('product-service')
+        url = f'{base_url}/api/products/{product_id}/'
         response = requests.get(url, timeout=5)
         
         if response.status_code == status.HTTP_200_OK:
             return response.json()
         return None
     except requests.exceptions.RequestException as e:
-        print(f"Error fetching product {product_id}: {e}")
+        logger.error(f"Error fetching product {product_id}: {e}")
         return None
 
 def get_all_products_from_service():
     """Get all products from Product Service via API"""
     try:
-        url = f'{settings.PRODUCT_SERVICE_URL}/api/products/'
+        base_url = get_service_url('product-service')
+        url = f'{base_url}/api/products/'
         response = requests.get(url, timeout=5)
         if response.status_code == 200:
             data = response.json()
             return data.get('results', data) if isinstance(data, dict) else data
         return []
-    except Exception:
+    except Exception as e:
+        logger.error(f"Error fetching products: {e}")
         return []
 
 def verify_user_from_service(user_id):
@@ -39,7 +89,8 @@ def verify_user_from_service(user_id):
     Returns True if user exists, False otherwise
     """
     try:
-        url = f'{settings.AUTH_SERVICE_URL}/api/users/{user_id}/'
+        base_url = get_service_url('auth-service')
+        url = f'{base_url}/api/users/{user_id}/'
         response = requests.get(url, timeout=5)
         return response.status_code == status.HTTP_200_OK
     except requests.exceptions.RequestException:
@@ -51,14 +102,15 @@ def get_user_info(user_id):
     Returns user data or None if not found
     """
     try:
-        url = f'{settings.AUTH_SERVICE_URL}/api/users/{user_id}/'
+        base_url = get_service_url('auth-service')
+        url = f'{base_url}/api/users/{user_id}/'
         response = requests.get(url, timeout=5)
         
         if response.status_code == status.HTTP_200_OK:
             return response.json()
         return None
     except requests.exceptions.RequestException as e:
-        print(f"Error fetching user {user_id}: {e}")
+        logger.error(f"Error fetching user {user_id}: {e}")
         return None
 
 def get_inventory(product_id):
@@ -67,14 +119,15 @@ def get_inventory(product_id):
     Returns inventory data or None if not found
     """
     try:
-        url = f'{settings.INVENTORY_SERVICE_URL}/api/inventory/{product_id}/'
+        base_url = get_service_url('inventory-service')
+        url = f'{base_url}/api/inventory/{product_id}/'
         response = requests.get(url, timeout=5)
         
         if response.status_code == status.HTTP_200_OK:
             return response.json()
         return None
     except requests.exceptions.RequestException as e:
-        print(f"Error fetching inventory for product {product_id}: {e}")
+        logger.error(f"Error fetching inventory for product {product_id}: {e}")
         return None
 
 def decrease_inventory(product_id, quantity):
@@ -86,18 +139,19 @@ def decrease_inventory(product_id, quantity):
         # Get current inventory
         inventory = get_inventory(product_id)
         if not inventory:
-            print(f"Could not fetch inventory for product {product_id}")
+            logger.error(f"Could not fetch inventory for product {product_id}")
             return False
         
         current_quantity = inventory.get('quantity', 0)
         new_quantity = current_quantity - quantity
         
         if new_quantity < 0:
-            print(f"Insufficient inventory for product {product_id}. Available: {current_quantity}, Requested: {quantity}")
+            logger.warning(f"Insufficient inventory for product {product_id}. Available: {current_quantity}, Requested: {quantity}")
             return False
         
         # Update inventory
-        url = f'{settings.INVENTORY_SERVICE_URL}/api/inventory/update/'
+        base_url = get_service_url('inventory-service')
+        url = f'{base_url}/api/inventory/update/'
         response = requests.put(url, json={
             'product_id': product_id,
             'quantity': new_quantity
@@ -107,19 +161,21 @@ def decrease_inventory(product_id, quantity):
             return True
         return False
     except requests.exceptions.RequestException as e:
-        print(f"Error decreasing inventory for product {product_id}: {e}")
+        logger.error(f"Error decreasing inventory for product {product_id}: {e}")
         return False
 
 def get_all_inventories():
     """Get all inventory records from Inventory Service"""
     try:
-        url = f'{settings.INVENTORY_SERVICE_URL}/api/inventory/'
+        base_url = get_service_url('inventory-service')
+        url = f'{base_url}/api/inventory/'
         response = requests.get(url, timeout=5)
         if response.status_code == 200:
             data = response.json()
             return data.get('results', data) if isinstance(data, dict) else data
         return []
-    except Exception:
+    except Exception as e:
+        logger.error(f"Error fetching inventories: {e}")
         return []
 
 def bulk_decrease_inventory(items_to_decrease):
@@ -142,9 +198,10 @@ def bulk_decrease_inventory(items_to_decrease):
             updates.append({"product_id": pid, "quantity": new_qty})
         
         # 3. Call bulk update API
-        url = f'{settings.INVENTORY_SERVICE_URL}/api/inventory/update/'
+        base_url = get_service_url('inventory-service')
+        url = f'{base_url}/api/inventory/update/'
         response = requests.put(url, json={"updates": updates}, timeout=10)
         return response.status_code == 200
     except Exception as e:
-        print(f"Error in bulk_decrease_inventory: {e}")
+        logger.error(f"Error in bulk_decrease_inventory: {e}")
         return False

@@ -3,7 +3,8 @@ from django.urls import path, include
 from inventory.views import (
     InventoryDashboardView,
     InventoryUpdatePageView,
-    WebInventoryUpdateView
+    WebInventoryUpdateView,
+    health_check
 )
 
 urlpatterns = [
@@ -15,4 +16,8 @@ urlpatterns = [
     # API Endpoints
     path('admin/', admin.site.urls),
     path('api/inventory/', include('inventory.urls')),
+    
+    # Health check for Consul
+    path('health', health_check, name='health_check'),
 ]
+

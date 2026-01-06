@@ -13,7 +13,9 @@ from users.views import (
     WebLoginView,
     WebRegisterView,
     LogoutView,
-    UserDetailView
+    UserDetailView,
+    # Health check
+    health_check
 )
 
 urlpatterns = [
@@ -33,4 +35,8 @@ urlpatterns = [
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('api/verify-token/', TokenVerifyView.as_view(), name='token_verify'),
     path('api/users/<int:pk>/', UserDetailView.as_view(), name='user_detail'),
+    
+    # Health check for Consul
+    path('health', health_check, name='health_check'),
 ]
+

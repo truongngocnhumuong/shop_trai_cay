@@ -15,6 +15,7 @@ ALLOWED_HOSTS = ['*']
 
 # Application definition
 INSTALLED_APPS = [
+    'auth_service.apps.AuthServiceConfig',  # Add this for Consul integration
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -108,3 +109,9 @@ SIMPLE_JWT = {
 # CORS settings
 CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOW_CREDENTIALS = True
+
+# --- Consul Service Discovery Configuration ---
+USE_CONSUL = os.getenv('USE_CONSUL', 'false').lower() == 'true'
+CONSUL_HOST = os.getenv('CONSUL_HOST', 'localhost')
+CONSUL_PORT = int(os.getenv('CONSUL_PORT', '8500'))
+SERVICE_ADDRESS = os.getenv('SERVICE_ADDRESS', 'localhost')

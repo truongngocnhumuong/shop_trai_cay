@@ -1,10 +1,13 @@
 import time
 from urllib.parse import urlencode
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
+from django.http import JsonResponse
+import requests
 from django.contrib import messages
 from django.views.decorators.http import require_http_methods
 from django.contrib.sessions.models import Session
 from django.urls import reverse
+from django.views.decorators.csrf import csrf_exempt
 
 from .utils import (
     call_auth_service_login,
@@ -15,12 +18,21 @@ from .utils import (
     create_order
 )
 
+# Health check endpoint for Consul
+def health_check(request):
+    return JsonResponse({
+        "status": "healthy",
+        "service": "frontend-service",
+        "version": "1.0.0"
+    })
+
 def index(request):
     """Home page - redirect to login or products"""
     if 'access_token' in request.session:
         return redirect('product_list')
     return redirect('login')
 
+@csrf_exempt
 @require_http_methods(["GET", "POST"])
 def login_view(request):
     """Login page"""

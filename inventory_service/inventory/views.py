@@ -182,3 +182,45 @@ class WebInventoryUpdateView(View):
             
         return redirect('inventory_dashboard')
 
+# --- Health Check for Consul ---
+
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import AllowAny
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def health_check(request):
+    """
+    Health check endpoint for Consul monitoring
+    
+    Returns:
+        200 OK if service is healthy
+        503 Service Unavailable if service has issues
+    """
+    try:
+        # Check database connection
+        from django.db import connection
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT 1")
+        
+        # Check if we can query inventory table
+        Inventory.objects.count()
+        
+        return Response({
+            'status': 'healthy',
+            'service': 'inventory-service',
+            'version': '1.0.0',
+            'checks': {
+                'database': 'ok',
+                'inventory_model': 'ok'
+            }
+        }, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        return Response({
+            'status': 'unhealthy',
+            'service': 'inventory-service',
+            'error': str(e)
+        }, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+
+

@@ -103,3 +103,9 @@ INVENTORY_SERVICE_URL = 'http://localhost:8004'
 SESSION_COOKIE_AGE = 86400  # 24 hours
 SESSION_SAVE_EVERY_REQUEST = True
 
+# --- Consul Service Discovery Configuration ---
+USE_CONSUL = os.getenv('USE_CONSUL', 'false').lower() == 'true'
+CONSUL_HOST = os.getenv('CONSUL_HOST', 'localhost')
+CONSUL_PORT = int(os.getenv('CONSUL_PORT', '8500'))
+SERVICE_ADDRESS = os.getenv('SERVICE_ADDRESS', 'localhost')
+

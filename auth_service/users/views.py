@@ -1,4 +1,6 @@
 from rest_framework import status, permissions
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework import permissions
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework_simplejwt.views import TokenVerifyView as SimpleJWTTokenVerifyView
@@ -11,6 +13,7 @@ from django.utils.decorators import method_decorator
 from django.views import View
 
 from .serializers import (
+    UserRegistrationSerializer,
     CustomTokenObtainPairSerializer,
     UserSerializer
 )
@@ -174,3 +177,42 @@ class UserDetailView(APIView):
             return Response(serializer.data)
         except User.DoesNotExist:
             return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+
+# --- Health Check for Consul ---
+
+@api_view(['GET'])
+@permission_classes([permissions.AllowAny])
+def health_check(request):
+    """
+    Health check endpoint for Consul monitoring
+    
+    Returns:
+        200 OK if service is healthy (database accessible)
+        503 Service Unavailable if service has issues
+    """
+    try:
+        # Check database connection
+        from django.db import connection
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT 1")
+        
+        # Check if we can query users table
+        User.objects.count()
+        
+        return Response({
+            'status': 'healthy',
+            'service': 'auth-service',
+            'version': '1.0.0',
+            'checks': {
+                'database': 'ok',
+                'user_model': 'ok'
+            }
+        }, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        return Response({
+            'status': 'unhealthy',
+            'service': 'auth-service',
+            'error': str(e)
+        }, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+
