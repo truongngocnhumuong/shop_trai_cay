@@ -93,11 +93,14 @@ STATIC_ROOT = BASE_DIR / 'staticfiles'
 # Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# Service URLs (SOA Configuration)
-AUTH_SERVICE_URL = 'http://localhost:8001'
-PRODUCT_SERVICE_URL = 'http://localhost:8002'
-ORDER_SERVICE_URL = 'http://localhost:8003'
-INVENTORY_SERVICE_URL = 'http://localhost:8004'
+# Service URLs (SOA Configuration - All pointing to Gateway)
+GATEWAY_URL = os.getenv('GATEWAY_URL', 'http://localhost:8005')
+
+# Fallbacks for direct communication if needed
+AUTH_SERVICE_URL = os.getenv('AUTH_SERVICE_URL', 'http://localhost:8001')
+PRODUCT_SERVICE_URL = os.getenv('PRODUCT_SERVICE_URL', 'http://localhost:8002')
+ORDER_SERVICE_URL = os.getenv('ORDER_SERVICE_URL', 'http://localhost:8003')
+INVENTORY_SERVICE_URL = os.getenv('INVENTORY_SERVICE_URL', 'http://localhost:8004')
 
 # Session settings
 SESSION_COOKIE_AGE = 86400  # 24 hours

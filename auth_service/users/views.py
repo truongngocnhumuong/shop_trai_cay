@@ -20,7 +20,7 @@ from .serializers import (
 from django.contrib.auth import get_user_model
 User = get_user_model()
 
-
+#APIVIEW cho phép xd api theo các pt HTTP (get, post, put, delete)
 class UserRegistrationView(APIView):
     """
     Register a new user
@@ -32,7 +32,7 @@ class UserRegistrationView(APIView):
         if serializer.is_valid():
             user = serializer.save()
             
-            # Generate tokens
+            # sinh ra  JWT Token cho người dùng
             refresh = RefreshToken.for_user(user)
             
             return Response({
@@ -215,4 +215,3 @@ def health_check(request):
             'service': 'auth-service',
             'error': str(e)
         }, status=status.HTTP_503_SERVICE_UNAVAILABLE)
-

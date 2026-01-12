@@ -5,13 +5,13 @@ from datetime import timedelta
 # Build paths inside the project
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# SECURITY WARNING: keep the secret key used in production secret!
+# Khóa bí mật cho mã hóa session, CSRF tokens
 SECRET_KEY = 'django-insecure-auth-service-secret-key-12345'
 
-# SECURITY WARNING: don't run with debug turned on in production!
+# Bật mode debug (production nên set False)
 DEBUG = True
 
-ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = ['*'] #Accept requests từ mọi domain
 
 # Application definition
 INSTALLED_APPS = [

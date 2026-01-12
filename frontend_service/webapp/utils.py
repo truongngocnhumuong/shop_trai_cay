@@ -1,3 +1,4 @@
+#Chứa các hàm tiện ích để giao tiếp giữa các service
 import time
 import requests
 import sys
@@ -13,42 +14,31 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 
 def get_service_url(service_name):
     """
-    Get service URL using Consul discovery or fallback to hardcoded URL
+    Get service URL - Prefer API Gateway for all backend requests
     """
-    # Try Consul discovery if enabled
+    # Prefer Gateway for all service calls from frontend
+    gateway_url = getattr(settings, 'GATEWAY_URL', 'http://localhost:8005')
+    
+    # We could still use Consul to find the Gateway itself if it's dynamic
     if getattr(settings, 'USE_CONSUL', False):
         try:
             from common.consul_client import get_consul_client
-            
             consul_client = get_consul_client()
-            url = consul_client.discover_service(service_name)
-            
-            if url:
-                logger.debug(f"Discovered {service_name} via Consul: {url}")
-                return url
-            else:
-                logger.warning(f"Consul discovery failed for {service_name}, using fallback")
+            discovered_gateway = consul_client.discover_service('gateway-service')
+            if discovered_gateway:
+                return discovered_gateway
         except Exception as e:
-            logger.warning(f"Error during Consul discovery for {service_name}: {e}, using fallback")
-    
-    # Fallback to hardcoded URLs from settings
-    fallback_map = {
-        'auth-service': settings.AUTH_SERVICE_URL,
-        'product-service': settings.PRODUCT_SERVICE_URL,
-        'order-service': settings.ORDER_SERVICE_URL,
-        'inventory-service': settings.INVENTORY_SERVICE_URL,
-    }
-    
-    fallback_url = fallback_map.get(service_name, '')
-    logger.debug(f"Using fallback URL for {service_name}: {fallback_url}")
-    return fallback_url
+            logger.warning(f"Consul discovery failed for gateway-service: {e}")
+
+    return gateway_url
 
 
 def call_auth_service_login(username, password):
     """Call Auth Service to login user"""
     try:
         base_url = get_service_url('auth-service')
-        url = f'{base_url}/api/login/'
+        # Use /api/auth/ prefix for Gateway to route correctly to Auth Service
+        url = f'{base_url}/api/auth/login/'
         response = requests.post(url, json={
             'username': username,
             'password': password
@@ -74,7 +64,8 @@ def call_auth_service_verify_token(token):
     """Call Auth Service to verify token"""
     try:
         base_url = get_service_url('auth-service')
-        url = f'{base_url}/api/verify-token/'
+        # Use /api/auth/ prefix for Gateway
+        url = f'{base_url}/api/auth/verify-token/'
         response = requests.post(url, json={'token': token}, timeout=5)
         
         if response.status_code == 200:
@@ -258,4 +249,3 @@ def create_order(user_id, items, access_token=None):
             'success': False,
             'error': f'Unexpected error: {str(e)}'
         }
-

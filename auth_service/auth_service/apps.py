@@ -31,12 +31,12 @@ class AuthServiceConfig(AppConfig):
             print("[DEBUG] Skipping Consul registration (not main process)")
             return
         
-        # Don't register during migrations or other management commands
+        # Không đăng ký khi chạy python manage.py migrate
         if 'migrate' in sys.argv or 'makemigrations' in sys.argv:
             print("[DEBUG] Skipping Consul registration (migration command)")
             return
         
-        # Check if Consul is enabled
+        # Lấy setting từ settings.py-  Nếu disabled thì không làm gì
         from django.conf import settings
         use_consul = getattr(settings, 'USE_CONSUL', False)
         

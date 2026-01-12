@@ -24,7 +24,7 @@ class ProductListCreateView(generics.ListCreateAPIView):
         notify_inventory_service(product.id, 'create')
 
     def get_serializer_context(self):
-        """Add request to serializer context for image URL generation"""
+        """Thêm request vào context để tạo URL ảnh"""
         context = super().get_serializer_context()
         context['request'] = self.request
         return context
@@ -67,14 +67,14 @@ class ProductCreatePageView(View):
         name = request.POST.get('name')
         price = request.POST.get('price')
         category = request.POST.get('category')
-        image = request.FILES.get('image')
+        image = request.FILES.get('image') ## Lấy file ảnh từ form
         
         try:
             product = Product.objects.create(
                 name=name,
                 price=price,
                 category=category,
-                image=image
+                image=image # # Lưu ảnh
             )
             # Notify inventory service
             notify_inventory_service(product.id, 'create')
@@ -165,5 +165,3 @@ def health_check(request):
             'service': 'product-service',
             'error': str(e)
         }, status=status.HTTP_503_SERVICE_UNAVAILABLE)
-
-
