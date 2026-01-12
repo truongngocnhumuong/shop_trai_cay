@@ -6,7 +6,8 @@ from .views import (
     OrderCreateWebView,
     OrderListCreateView,
     OrderDetailView,
-    OrderItemListView
+    OrderItemListView,
+    OrderPaymentStatusUpdateView
 )
 
 urlpatterns = [
@@ -17,6 +18,7 @@ urlpatterns = [
     # API endpoints
     path('api/orders/', OrderListCreateView.as_view(), name='order-list-create'),
     path('api/orders/<int:pk>/', OrderDetailView.as_view(), name='order-detail'),
+    path('api/orders/<int:pk>/payment-status/', OrderPaymentStatusUpdateView.as_view(), name='order-payment-status'),
     path('api/orders/<int:order_id>/items/', OrderItemListView.as_view(), name='order-item-list'),
     path('api/orders/<int:order_id>/items/<int:pk>/', OrderItemDetailView.as_view(), name='order-item-detail'),
 ]

@@ -9,9 +9,16 @@ class Order(models.Model):
         ('cancelled', 'Cancelled'),
     )
     
+    PAYMENT_STATUS_CHOICES = (
+        ('pending', 'Pending'),
+        ('paid', 'Paid'),
+        ('failed', 'Failed'),
+    )
+    
     user_id = models.IntegerField(verbose_name='User ID')
     total_price = models.DecimalField(max_digits=10, decimal_places=2, default=0.00, verbose_name='Total Price')
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending', verbose_name='Status')
+    payment_status = models.CharField(max_length=20, choices=PAYMENT_STATUS_CHOICES, default='pending', verbose_name='Payment Status')
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='Created At')
     updated_at = models.DateTimeField(auto_now=True, verbose_name='Updated At')
     

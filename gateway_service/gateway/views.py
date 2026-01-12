@@ -28,6 +28,7 @@ def get_service_url(service_name):
         'product-service': settings.PRODUCT_SERVICE_URL,
         'order-service': settings.ORDER_SERVICE_URL,
         'inventory-service': settings.INVENTORY_SERVICE_URL,
+        'payment-service': settings.PAYMENT_SERVICE_URL,
     }
     return fallback_map.get(service_name, '')
 
@@ -41,6 +42,8 @@ def proxy_view(request, service_name, path):
         'products': 'product-service',
         'orders': 'order-service',
         'inventory': 'inventory-service',
+        'payments': 'payment-service',
+        'payments_ui': 'payment-service',
     }
     
     # Mapping between gateway service name and backend API prefix
@@ -50,6 +53,8 @@ def proxy_view(request, service_name, path):
         'products': 'products/',
         'orders': 'orders/',
         'inventory': 'inventory/',
+        'payments': 'payments/',
+        'payments_ui': 'checkout/',
     }
     
     target_service = service_map.get(service_name)

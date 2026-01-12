@@ -8,14 +8,16 @@ from django.views.decorators.http import require_http_methods
 from django.contrib.sessions.models import Session
 from django.urls import reverse
 from django.views.decorators.csrf import csrf_exempt
+from django.conf import settings
 
 from .utils import (
     call_auth_service_login,
     call_auth_service_verify_token,
     get_products,
-    get_inventory,
     get_all_inventories,
-    create_order
+    create_order,
+    create_payment,
+    complete_payment_service
 )
 
 # Health check endpoint for Consul
@@ -167,15 +169,18 @@ def create_order_view(request):
         result = create_order(user_id, items, access_token)
         
         if result['success']:
+            # Initialize payment
             order_data = result['data']
-            messages.success(request, f'Đơn hàng #{order_data.get("id")} đã được tạo thành công!')
+            payment_result = create_payment(order_data.get("id"), order_data.get("total_price"))
+            if payment_result['success']:
+                payment_id = payment_result['data'].get('id')
+                # Redirect to the new Checkout UI via Gateway
+                gateway_url = getattr(settings, 'GATEWAY_URL', 'http://localhost:8005')
+                return redirect(f"{gateway_url}/checkout/{payment_id}/")
             
-            # Clear any cached product data
-            if 'products_cache' in request.session:
-                del request.session['products_cache']
-            
-            # Force a redirect with a timestamp to ensure fresh data
-            return redirect(f"{reverse('product_list')}?clear_cache=true&_={int(time.time())}")
+            error_msg = payment_result.get('error', 'Lỗi không xác định')
+            messages.error(request, f'Đơn hàng #{order_data.get("id")} đã được tạo, nhưng không thể khởi tạo thanh toán: {error_msg}')
+            return redirect('product_list')
         else:
             messages.error(request, result.get('error', 'Không thể tạo đơn hàng. Vui lòng thử lại.'))
     
@@ -201,4 +206,21 @@ def create_order_view(request):
     }
     
     return render(request, 'create_order.html', context)
+
+@require_http_methods(["GET", "POST"])
+def payment_view(request, payment_id):
+    """Payment page"""
+    if 'access_token' not in request.session:
+        return redirect('login')
+        
+    if request.method == 'POST':
+        result = complete_payment_service(payment_id)
+        if result['success']:
+            messages.success(request, 'Thanh toán thành công! Đơn hàng của bạn đã được hoàn tất.')
+            return render(request, 'payment_success.html', {'data': result['data']})
+        else:
+            messages.error(request, f"Lỗi thanh toán: {result.get('error')}")
+            
+    # GET request - fetch payment details (we can add a get_payment util if needed, but for now we'll just show the button)
+    return render(request, 'payment.html', {'payment_id': payment_id})
 

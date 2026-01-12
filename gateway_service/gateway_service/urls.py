@@ -17,4 +17,10 @@ urlpatterns = [
     
     # Inventory Service proxy
     re_path(r'^api/inventory/(?P<path>.*)$', proxy_view, {'service_name': 'inventory'}, name='inventory_proxy'),
+    
+    # Payment Service proxy
+    re_path(r'^api/payments/(?P<path>.*)$', proxy_view, {'service_name': 'payments'}, name='payment_proxy'),
+    
+    # Payment UI (Direct)
+    re_path(r'^checkout/(?P<path>.*)$', proxy_view, {'service_name': 'payments_ui'}, name='payment_ui_proxy'),
 ]

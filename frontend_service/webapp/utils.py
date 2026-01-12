@@ -249,3 +249,38 @@ def create_order(user_id, items, access_token=None):
             'success': False,
             'error': f'Unexpected error: {str(e)}'
         }
+
+def create_payment(order_id, amount):
+    """Create payment via Gateway -> Payment Service"""
+    try:
+        base_url = get_service_url('payment-service')
+        url = f'{base_url}/api/payments/'
+        response = requests.post(url, json={
+            'order_id': order_id,
+            'amount': str(amount)
+        }, timeout=5)
+        
+        if response.status_code == 201:
+            return {'success': True, 'data': response.json()}
+        
+        error_msg = 'Failed to initialize payment'
+        try:
+            error_msg = response.json().get('error', error_msg)
+        except:
+            pass
+        return {'success': False, 'error': f"{error_msg} (Status: {response.status_code})"}
+    except Exception as e:
+        return {'success': False, 'error': f"Connection Error: {str(e)}"}
+
+def complete_payment_service(payment_id):
+    """Complete payment via Gateway -> Payment Service"""
+    try:
+        base_url = get_service_url('payment-service')
+        url = f'{base_url}/api/payments/{payment_id}/complete/'
+        response = requests.post(url, timeout=10)
+        
+        if response.status_code == 200:
+            return {'success': True, 'data': response.json()}
+        return {'success': False, 'error': 'Payment processing failed'}
+    except Exception as e:
+        return {'success': False, 'error': str(e)}

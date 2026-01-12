@@ -96,6 +96,29 @@ class OrderItemDetailView(generics.RetrieveUpdateDestroyAPIView):
         order.calculate_total()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
+class OrderPaymentStatusUpdateView(generics.UpdateAPIView):
+    """
+    PATCH /api/orders/{id}/payment-status/ - Update order payment status
+    """
+    queryset = Order.objects.all()
+    serializer_class = OrderSerializer
+    
+    def patch(self, request, *args, **kwargs):
+        instance = self.get_object()
+        payment_status = request.data.get('payment_status')
+        
+        if payment_status not in dict(Order.PAYMENT_STATUS_CHOICES):
+            return Response({'error': 'Invalid payment status'}, status=status.HTTP_400_BAD_REQUEST)
+            
+        instance.payment_status = payment_status
+        
+        # If paid, automatically set order status to completed/processing
+        if payment_status == 'paid':
+            instance.status = 'completed'
+            
+        instance.save()
+        return Response(OrderSerializer(instance).data)
+
 
 # --- Web Interface Views ---
 
